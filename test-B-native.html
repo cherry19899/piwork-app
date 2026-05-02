@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test B: Native SDK Only</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #111; color: #fff; }
+        button { width: 100%; padding: 20px; font-size: 18px; margin: 10px 0; background: #3b82f6; color: #fff; border: none; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 14px; min-height: 300px; white-space: pre-wrap; }
+        .err { color: #f00; }
+    </style>
+</head>
+<body>
+    <h1>Test B: Native SDK Only</h1>
+    <p>NO external script. Only window.Pi from Pi Browser.</p>
+    <button onclick="testAuth()">1. Test Pi.authenticate</button>
+    <button onclick="testPayment()">2. Test Pi.createPayment</button>
+    <div id="log"></div>
+    <script>
+        function log(msg, isErr) {
+            const d = document.getElementById('log');
+            const line = document.createElement('div');
+            line.textContent = '> ' + msg;
+            line.className = isErr ? 'err' : '';
+            d.appendChild(line);
+            d.scrollTop = d.scrollHeight;
+        }
+
+        log('Step 1: Checking if native Pi exists...');
+        if (typeof Pi === 'undefined') {
+            log('RESULT: Native Pi SDK NOT found! Pi Browser did not provide it.', true);
+        } else {
+            log('OK: Native Pi object found');
+            try {
+                Pi.init({ version: "2.0" });
+                log('OK: Pi.init() success');
+            } catch (e) {
+                log('ERROR: Pi.init() failed: ' + e.message, true);
+            }
+        }
+
+        function testAuth() {
+            log('--- Testing authenticate ---');
+            if (!Pi || !Pi.authenticate) {
+                log('ERROR: Pi.authenticate missing', true);
+                return;
+            }
+            Pi.authenticate(['username','payments'], function(p) {
+                log('Callback: incomplete payment found');
+            }).then(function(auth) {
+                log('SUCCESS! User: ' + auth.user.username);
+            }).catch(function(e) {
+                log('ERROR: ' + e.message, true);
+            });
+        }
+
+        function testPayment() {
+            log('--- Testing createPayment ---');
+            if (!Pi || !Pi.createPayment) {
+                log('ERROR: Pi.createPayment missing', true);
+                return;
+            }
+            log('Opening wallet...');
+            Pi.createPayment({
+                amount: 1.0,
+                memo: "Test B",
+                metadata: { test: true }
+            }, {
+                onReadyForServerApproval: function(id) { log('Event: onReadyForServerApproval, id=' + id); },
+                onReadyForServerCompletion: function(id, txid) { log('Event: onReadyForServerCompletion, id=' + id); },
+                onCancel: function(id) { log('Event: onCancel, id=' + id); },
+                onError: function(id, err) { log('Event: onError: ' + err.message, true); }
+            });
+        }
+    </script>
+</body>
+</html>
